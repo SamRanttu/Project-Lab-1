@@ -1,4 +1,5 @@
 #include <msp430.h> 
+// Not part of acutal project
 // MSP430 & SG90 Servo
 // Example
 // Source of help: https://youtu.be/V3v5ItyMKVc
@@ -23,3 +24,4 @@ void main(void)
     __delay_cycles(1500000);
     }
 }
+
