@@ -4,35 +4,6 @@
 
 volatile uint8_t overcurrent = 0;
 
-
-int main(void) {
-
-    PMM_unlockLPM5();
-
-    WDTCTL = WDTPW | WDTHOLD; //stop watchdog timer
-
-    //p2.6 timer
-    P2DIR |= BIT6 | BIT7; 
-    P2SEL0 |= BIT6 | BIT7; 
-    P2SEL1 &= ~BIT6 | BIT7;
-
-    //Output pins
-    P1DIR |= BIT3;
-    P2DIR |= BIT2;
-    P3DIR |= BIT0;
-    P3DIR |= BIT1;
-    P1DIR |= BIT0; 
-    //comparator input
-    P2DIR &= ~BIT0;
-    P2REN &= ~BIT0;
-    P2IES &= ~BIT0;
-    P2IFG &= ~BIT0;
-    P2IE |= BIT0;
-
-    __enable_interrupt();
-    movement();
-}
-
 int movement(void) {
 
     //pwm timer for pin 2.6
@@ -66,7 +37,38 @@ int movement(void) {
 
     P3OUT &= ~BIT1;
     P2OUT &= ~BIT2;
+    return 0;
+    }
+
+int main(void) {
+
+    PMM_unlockLPM5();
+
+    WDTCTL = WDTPW | WDTHOLD; //stop watchdog timer
+
+    //p2.6 timer
+    P2DIR |= BIT6 | BIT7; 
+    P2SEL0 |= BIT6 | BIT7; 
+    P2SEL1 &= ~BIT6 | BIT7;
+
+    //Output pins
+    P1DIR |= BIT3;
+    P2DIR |= BIT2;
+    P3DIR |= BIT0;
+    P3DIR |= BIT1;
+    P1DIR |= BIT0; 
+    //comparator input
+    P2DIR &= ~BIT0;
+    P2REN &= ~BIT0;
+    P2IES &= ~BIT0;
+    P2IFG &= ~BIT0;
+    P2IE |= BIT0;
+
+    __enable_interrupt();
+    movement();
 }
+
+
 
 #pragma vector=PORT2_VECTOR
 __interrupt void PORT_2(void){
