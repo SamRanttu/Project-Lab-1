@@ -1,27 +1,58 @@
-#include <msp430.h> 
-// Not part of acutal project
-// MSP430 & SG90 Servo
-// Example
-// Source of help: https://youtu.be/V3v5ItyMKVc
+#include <msp430.h>
+
+// MSP430G2ET + SG90 Servo + Push Button
+// Button on P1.3, Servo signal on P1.6 (Timer_A0.1 PWM output)
+
 void main(void)
 {
-    WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
-    BCSCTL1= CALBC1_1MHZ;
+    WDTCTL = WDTPW | WDTHOLD;   // Stop watchdog timer
+
+    // Set DCO to 1 MHz
+    BCSCTL1 = CALBC1_1MHZ;
     DCOCTL = CALDCO_1MHZ;
-    //PWM period
-    P1DIR |= BIT6;
-    P1SEL |= BIT6;  // selection for timer setting
-    while(1) {
-    TACCR0 = 20000;  // PWM period
-    TACCR1 = 350;  // CCR1 PWM Duty Cycle ; min 350 max 2600 angle 190,
-    //350 2350-180 degrees
-    TACCTL1 = OUTMOD_7;  // CCR1 selection reset-set
-    TACTL = TASSEL_2|MC_1;   // SMCLK submain clock,upmode
-    __delay_cycles(1500000);
-    TACCR1 = 2600;
-    TACCTL1 = OUTMOD_7;  // CCR1 selection reset-set
-    TACTL = TASSEL_2|MC_1;
-    __delay_cycles(1500000);
+
+    // --- Servo PWM Setup ---
+    P1DIR |= BIT6;     // P1.6 output
+    P1SEL |= BIT6;     // P1.6 = TA0.1 (Timer_A output)
+    
+    // --- Button Setup (P1.3) ---
+    P1DIR &= ~BIT3;    // P1.3 input
+    P1REN |= BIT3;     // Enable resistor
+    P1OUT |= BIT3;     // Pull-up resistor (P1.3 reads HIGH when unpressed)
+
+    // --- Timer_A Setup ---
+    TACCR0 = 20000;           // PWM period = 20ms (50Hz)
+    TACCTL1 = OUTMOD_7;       // Reset/set mode
+    TACTL = TASSEL_2 | MC_1;  // SMCLK, up mode (counts to TACCR0)
+
+    // --- Servo Positions ---
+    unsigned int pos0 = 350;     // ~0 degrees
+    unsigned int pos180 = 2600;  // ~180 degrees
+    unsigned int currentPos = pos0;
+
+    TACCR1 = currentPos;   // Start at 0 degrees
+
+    while (1)
+    {
+        // Check if button is pressed (active low)
+        if (!(P1IN & BIT3))
+        {
+            __delay_cycles(20000); // Debounce delay (~20ms)
+            if (!(P1IN & BIT3))    // Confirm button still pressed
+            {
+                // Toggle servo position
+                if (currentPos == pos0)
+                    currentPos = pos180;
+                else
+                    currentPos = pos0;
+
+                TACCR1 = currentPos;     // Update PWM pulse width
+                __delay_cycles(1500000); // Wait ~1.5s for servo to move
+
+                // Wait for button release (avoid multiple triggers)
+                while (!(P1IN & BIT3));
+                __delay_cycles(20000);   // Debounce release
+            }
+        }
     }
 }
-
