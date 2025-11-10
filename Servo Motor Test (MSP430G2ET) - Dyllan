@@ -1,7 +1,9 @@
 #include <msp430.h>
 
-// MSP430G2ET with SG90 Servo and Push Button
-// Button on P1.3, Servo signal on P1.6 (Timer_A0.1 PWM output)
+// MSP430G2ET with SG90 Servo and one Push Button
+// Button on P1.3, Servo signal on P1.6 (Timer_A0.1 output)
+
+void delay_ms(unsigned int ms);
 
 void main(void)
 {
@@ -14,46 +16,56 @@ void main(void)
     // Servo PWM Setup
     P1DIR |= BIT6;     // P1.6 output
     P1SEL |= BIT6;     // P1.6 = TA0.1 (Timer_A output)
-    
+
     // Button Setup (P1.3)
     P1DIR &= ~BIT3;    // P1.3 input
-    P1REN |= BIT3;     // Enable resistor
-    P1OUT |= BIT3;     // Pull-up resistor (P1.3 reads HIGH when unpressed)
+    P1REN |= BIT3;     // Enable internal resistor
+    P1OUT |= BIT3;     // Use pull-up resistor (HIGH when not pressed)
 
-    // Timer_A Setup
+    // Timer_A Setup for PWM
     TACCR0 = 20000;           // PWM period = 20ms (50Hz)
     TACCTL1 = OUTMOD_7;       // Reset/set mode
-    TACTL = TASSEL_2 | MC_1;  // SMCLK, up mode (counts to TACCR0)
+    TACTL = TASSEL_2 | MC_1;  // SMCLK, up mode
 
-    // Servo Positions
+    // Servo positions
     unsigned int pos0 = 350;     // ~0 degrees
     unsigned int pos180 = 2600;  // ~180 degrees
-    unsigned int currentPos = pos0;
+    unsigned int i;
 
-    TACCR1 = currentPos;   // Start at 0 degrees
+    TACCR1 = pos0;  // Start at 0 degrees
 
     while (1)
     {
-        // Check if button is pressed (active low)
+        // Check if button pressed (active low)
         if (!(P1IN & BIT3))
         {
             __delay_cycles(20000); // Debounce delay (~20ms)
-            if (!(P1IN & BIT3))    // Confirm button still pressed
+            if (!(P1IN & BIT3))    // Confirm it's still pressed
             {
-                // Toggle servo position
-                if (currentPos == pos0)
-                    currentPos = pos180;
-                else
-                    currentPos = pos0;
+                // Move fast to 180 degrees
+                TACCR1 = pos180;
+                delay_ms(300);   // wait 0.3s at 180°
 
-                TACCR1 = currentPos;     // Update PWM pulse width
-                __delay_cycles(1500000); // Wait ~1.5s for servo to move
+                // Return slowly to 0 degrees
+                for (i = pos180; i > pos0; i -= 20)
+                {
+                    TACCR1 = i;
+                    delay_ms(20);
+                }
 
-                // Wait for button release (avoid multiple triggers)
+                TACCR1 = pos0;   // final exact position
+
+                // Wait for button release
                 while (!(P1IN & BIT3));
-                __delay_cycles(20000);   // Debounce release
+                __delay_cycles(20000); // debounce release
             }
         }
     }
 }
 
+// Delay function (1ms at 1 MHz)
+void delay_ms(unsigned int ms)
+{
+    while (ms--)
+        __delay_cycles(1000);
+}
