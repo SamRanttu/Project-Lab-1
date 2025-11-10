@@ -1,6 +1,6 @@
 #include <msp430.h>
 
-// MSP430G2ET + SG90 Servo + Push Button
+// MSP430G2ET with SG90 Servo and Push Button
 // Button on P1.3, Servo signal on P1.6 (Timer_A0.1 PWM output)
 
 void main(void)
@@ -11,21 +11,21 @@ void main(void)
     BCSCTL1 = CALBC1_1MHZ;
     DCOCTL = CALDCO_1MHZ;
 
-    // --- Servo PWM Setup ---
+    // Servo PWM Setup
     P1DIR |= BIT6;     // P1.6 output
     P1SEL |= BIT6;     // P1.6 = TA0.1 (Timer_A output)
     
-    // --- Button Setup (P1.3) ---
+    // Button Setup (P1.3)
     P1DIR &= ~BIT3;    // P1.3 input
     P1REN |= BIT3;     // Enable resistor
     P1OUT |= BIT3;     // Pull-up resistor (P1.3 reads HIGH when unpressed)
 
-    // --- Timer_A Setup ---
+    // Timer_A Setup
     TACCR0 = 20000;           // PWM period = 20ms (50Hz)
     TACCTL1 = OUTMOD_7;       // Reset/set mode
     TACTL = TASSEL_2 | MC_1;  // SMCLK, up mode (counts to TACCR0)
 
-    // --- Servo Positions ---
+    // Servo Positions
     unsigned int pos0 = 350;     // ~0 degrees
     unsigned int pos180 = 2600;  // ~180 degrees
     unsigned int currentPos = pos0;
@@ -56,3 +56,4 @@ void main(void)
         }
     }
 }
+
