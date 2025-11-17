@@ -1,7 +1,7 @@
 #include <msp430.h>
 
 // MSP430G2ET with SG90 Servo and Push Button
-// Button on P1.3, Servo signal on P1.6 (Timer_A0.1 PWM output)
+// Button on P1.3, Servo signal on P1.6 (Timer A0.1 PWM output)
 
 void main(void)
 {
@@ -13,21 +13,21 @@ void main(void)
 
     // Servo PWM Pin Setup (P1.6)
     P1DIR |= BIT6;     // P1.6 output
-    P1SEL |= BIT6;     // P1.6 = TA0.1 (Timer_A output)
+    P1SEL |= BIT6;     // P1.6 = TA0.1 (Timer A output)
 
     // Button Setup (P1.3)
     P1DIR &= ~BIT3;    // P1.3 input
     P1REN |= BIT3;     // Enable resistor
     P1OUT |= BIT3;     // Pull-up resistor (P1.3 HIGH when not pressed)
 
-    // Timer_A Setup for PWM
+    // Timer A Setup for PWM
     TACCR0 = 20000;           // PWM period = 20ms (50Hz)
     TACCTL1 = OUTMOD_7;       // Reset/Set mode
     TACTL = TASSEL_2 | MC_1;  // SMCLK, Up mode
 
     // Servo Positions
-    unsigned int pos0 = 350;     // ~0 degrees (0.35ms pulse)
-    unsigned int pos180 = 2600;  // ~180 degrees (2.6ms pulse)
+    unsigned int pos0 = 350;     // 0 degrees (0.35ms pulse)
+    unsigned int pos180 = 2600;  // 180 degrees (2.6ms pulse)
     TACCR1 = pos0;               // Start at 0 degrees
 
     while (1)
@@ -35,16 +35,16 @@ void main(void)
         // Check if button pressed (active low)
         if (!(P1IN & BIT3))
         {
-            __delay_cycles(20000); // Debounce press (~20ms)
+            __delay_cycles(20000); // Debounce press (20ms)
             if (!(P1IN & BIT3))    // Confirm still pressed
             {
                 // Flip servo to 180 degrees
                 TACCR1 = pos180;
-                __delay_cycles(1000000); // Wait ~1 second at far end
+                __delay_cycles(1000000); // Wait 1 second at far end
 
                 // Return to 0 degrees
                 TACCR1 = pos0;
-                __delay_cycles(1000000); // Wait ~1 second before ready again
+                __delay_cycles(1000000); // Wait 1 second before ready again
 
                 // Wait for button release
                 while (!(P1IN & BIT3));
@@ -53,3 +53,4 @@ void main(void)
         }
     }
 }
+
