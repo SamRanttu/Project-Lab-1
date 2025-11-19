@@ -40,11 +40,11 @@ void main(void)
             {
                 // Flip servo to 180 degrees
                 TACCR1 = pos180;
-                __delay_cycles(1000000); // Wait 1 second at far end
+                __delay_cycles(300000); // Wait 1 second at far end
 
                 // Return to 0 degrees
                 TACCR1 = pos0;
-                __delay_cycles(1000000); // Wait 1 second before ready again
+                __delay_cycles(300000); // Wait 1 second before ready again
 
                 // Wait for button release
                 while (!(P1IN & BIT3));
@@ -53,4 +53,5 @@ void main(void)
         }
     }
 }
+
 
