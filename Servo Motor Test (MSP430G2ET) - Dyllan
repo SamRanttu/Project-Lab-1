@@ -1,57 +1,67 @@
 #include <msp430.h>
 
-// MSP430G2ET with SG90 Servo and Push Button
-// Button on P1.3, Servo signal on P1.6 (Timer A0.1 PWM output)
+// Servo positions
+unsigned int pos0   = 350;   // 0 degrees
+unsigned int pos180 = 2600;  // 180 degrees
+volatile unsigned char toggle = 0;
 
-void main(void)
+int main(void)
 {
     WDTCTL = WDTPW | WDTHOLD;   // Stop watchdog timer
 
     // Clock Setup (1 MHz)
     BCSCTL1 = CALBC1_1MHZ;
-    DCOCTL = CALDCO_1MHZ;
+    DCOCTL  = CALDCO_1MHZ;
 
-    // Servo PWM Pin Setup (P1.6)
-    P1DIR |= BIT6;     // P1.6 output
-    P1SEL |= BIT6;     // P1.6 = TA0.1 (Timer A output)
+    // Servo PWM Pin Setup (P1.6 = TA0.1)
+    P1DIR |= BIT6;
+    P1SEL |= BIT6;
 
-    // Button Setup (P1.3)
-    P1DIR &= ~BIT3;    // P1.3 input
-    P1REN |= BIT3;     // Enable resistor
-    P1OUT |= BIT3;     // Pull-up resistor (P1.3 HIGH when not pressed)
+    // Button setup on P1.3
+    P1DIR &= ~BIT3;      // Input
+    P1REN |= BIT3;       // Enable resistor
+    P1OUT |= BIT3;       // Pull-up resistor
 
-    // Timer A Setup for PWM
-    TACCR0 = 20000;           // PWM period = 20ms (50Hz)
-    TACCTL1 = OUTMOD_7;       // Reset/Set mode
-    TACTL = TASSEL_2 | MC_1;  // SMCLK, Up mode
+    // Enable interrupt on P1.3 (falling edge)
+    P1IE  |= BIT3;       // Enable interrupt
+    P1IES |= BIT3;       // High to Low edge (button press)
+    P1IFG &= ~BIT3;      // Clear interrupt flag
 
-    // Servo Positions
-    unsigned int pos0 = 350;     // 0 degrees (0.35ms pulse)
-    unsigned int pos180 = 2600;  // 180 degrees (2.6ms pulse)
-    TACCR1 = pos0;               // Start at 0 degrees
+    // Timer A setup
+    TACCR0  = 20000;             // 20 ms period
+    TACCTL1 = OUTMOD_7;          // Reset/set PWM mode
+    TACCR1  = pos0;              // Start at 0 degrees
+    TACTL   = TASSEL_2 | MC_1;   // SMCLK, UP mode
+
+    __bis_SR_register(GIE);      // Enable global interrupts
 
     while (1)
     {
-        // Check if button pressed (active low)
-        if (!(P1IN & BIT3))
-        {
-            __delay_cycles(20000); // Debounce press (20ms)
-            if (!(P1IN & BIT3))    // Confirm still pressed
-            {
-                // Flip servo to 180 degrees
-                TACCR1 = pos180;
-                __delay_cycles(300000); // Wait 1 second at far end
-
-                // Return to 0 degrees
-                TACCR1 = pos0;
-                __delay_cycles(300000); // Wait 1 second before ready again
-
-                // Wait for button release
-                while (!(P1IN & BIT3));
-                __delay_cycles(20000);   // Debounce release
-            }
-        }
+        // main loop does nothing - servo is controlled by interrupt
+        __no_operation();
     }
 }
 
+// Port 1 ISR
+#pragma vector=PORT1_VECTOR
+__interrupt void Port_1_ISR(void)
+{
+    __delay_cycles(20000);  // Debounce (20ms)
 
+    if (!(P1IN & BIT3))     // Still pressed?
+    {
+        if (toggle == 0)
+        {
+            TACCR1 = pos180;    // Move to 180 degrees
+            toggle = 1;
+        }
+        else
+        {
+            TACCR1 = pos0;      // Move to 0 degrees
+            toggle = 0;
+        }
+    }
+
+    // Clear interrupt flag
+    P1IFG &= ~BIT3;
+}
