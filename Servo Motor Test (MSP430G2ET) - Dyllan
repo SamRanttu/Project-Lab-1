@@ -65,3 +65,4 @@ __interrupt void Port_1_ISR(void)
     // Clear interrupt flag
     P1IFG &= ~BIT3;
 }
+
